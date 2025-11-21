@@ -52,7 +52,9 @@ export default (env: any, argv: any): Configuration => {
     output: {
       filename: "[name].js",
       path: resolve(__dirname, "dist"),
-      publicPath: isProduction ? "/basic-frogger/" : "/",
+      // Use relative path for local builds (works with live server)
+      // Set GITHUB_PAGES=true environment variable for GitHub Pages deployment
+      publicPath: process.env.GITHUB_PAGES === "true" ? "/basic-frogger/" : "./",
     },
     plugins: [
       new HtmlWebpackPlugin({

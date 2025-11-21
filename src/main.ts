@@ -122,15 +122,22 @@ function main() {
     direction === 'up' ? top <= 0 : bottom >= CANVAS_HEIGHT;
   
   // Reset x position when object wraps around screen
+  // Allows objects to smoothly transition from one side to the other
   const resetX = (left: number, speed: number, right: number): number => {
+    const width = right - left;
     const newLeft = left + speed;
-    const newRight = right + speed;
-    if (checkBoundaryH('left', newLeft, newRight)) {
-      return CANVAS_WIDTH - (right - left);
+    const newRight = newLeft + width;
+    
+    // Object moving right: if completely off right side, wrap to left side (negative x for gradual appearance)
+    if (speed > 0 && newLeft >= CANVAS_WIDTH) {
+      return -width; // Start off-screen on the left, will gradually appear
     }
-    if (checkBoundaryH('right', newLeft, newRight)) {
-      return 0;
+    
+    // Object moving left: if completely off left side, wrap to right side (beyond canvas for gradual appearance)
+    if (speed < 0 && newRight <= 0) {
+      return CANVAS_WIDTH; // Start off-screen on the right, will gradually appear
     }
+    
     return newLeft;
   };
   
@@ -208,16 +215,22 @@ function main() {
 
   // ========== INITIAL GAME STATE ==========
   const initialFrog = new Frog(FROG_START_X, FROG_START_Y, FROG_SIZE, FROG_SIZE, FROG_COLOUR);
+  
+  // Initialize cars: objects moving right start off-screen left, objects moving left start off-screen right
+  // CAR_SPEEDS = [1, 3, -4, -2.5] (cars 0,1 move right; cars 2,3 move left)
   const initialCars = [
-    new Car(400, 570, 130, 50),
-    new Car(250, 420, 130, 50),
-    new Car(100, 630, 80, 50),
-    new Car(330, 500, 150, 50)
+    new Car(-130, 570, 130, 50),  // Car 0: speed 1 (right) - start off-screen left
+    new Car(-130, 420, 130, 50), // Car 1: speed 3 (right) - start off-screen left
+    new Car(600, 630, 80, 50),   // Car 2: speed -4 (left) - start off-screen right
+    new Car(600, 500, 150, 50)    // Car 3: speed -2.5 (left) - start off-screen right
   ];
+  
+  // Initialize logs: objects moving right start off-screen left, objects moving left start off-screen right
+  // LOG_SPEEDS = [2, -3, 1] (logs 0,2 move right; log 1 moves left)
   const initialLogs = [
-    new Wood(100, 250, 200, 80),
-    new Wood(300, 170, 400, 70),
-    new Wood(250, 80, 300, 80)
+    new Wood(-200, 250, 200, 80), // Log 0: speed 2 (right) - start off-screen left
+    new Wood(600, 170, 400, 70), // Log 1: speed -3 (left) - start off-screen right
+    new Wood(-300, 80, 300, 80)  // Log 2: speed 1 (right) - start off-screen left
   ];
   const initialGame = new Game(0, false, initialFrog, initialCars, initialLogs, false);
   const initGoal = new Goal(FROG_START_X, 0, FROG_SIZE, FROG_SIZE);
