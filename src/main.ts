@@ -260,12 +260,11 @@ function main() {
           )
       : acc.Frog;
 
-    // Update cars and logs positions
-    const newCars = updateCars(acc.Car, CAR_SPEEDS);
-    const newLogs = updateLogs(acc.Wood, LOG_SPEEDS);
-
-    // Move frog with log if standing on one
-    const logSpeed = getLogSpeed(movedFrog, newLogs, LOG_SPEEDS);
+    // Check if frog is on a log BEFORE logs move (using current log positions)
+    // This ensures the frog moves with the log it's standing on
+    const logSpeed = getLogSpeed(movedFrog, acc.Wood, LOG_SPEEDS);
+    
+    // Move frog with log if standing on one (apply log speed to frog)
     const frogOnLog = logSpeed !== 0
       ? new Frog(
           movedFrog.x + logSpeed,
@@ -275,6 +274,10 @@ function main() {
           movedFrog.colour
         )
       : movedFrog;
+
+    // Update cars and logs positions (after moving frog with log)
+    const newCars = updateCars(acc.Car, CAR_SPEEDS);
+    const newLogs = updateLogs(acc.Wood, LOG_SPEEDS);
 
     // Clamp frog position to boundaries
     const clampedFrog = new Frog(
