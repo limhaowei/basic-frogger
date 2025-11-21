@@ -3,15 +3,19 @@
   "version": "1.0.0",
   "description": "",
   "main": "./src/main.ts",
+  "homepage": "https://limhaowei.github.io/basic-frogger",
   "scripts": {
-    "build": "webpack --watch",
-    "dev": "webpack serve"
+    "dev": "webpack serve",
+    "build": "webpack --mode production",
+    "predeploy": "npm run build",
+    "deploy": "gh-pages -d dist"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "css-loader": "^6.7.1",
+    "gh-pages": "^6.3.0",
     "html-webpack-plugin": "^5.5.0",
     "npm-run-all": "^4.1.5",
     "style-loader": "^3.3.1",
