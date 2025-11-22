@@ -29,6 +29,10 @@ function main() {
     ) {}
   }
 
+  class Restart {
+    constructor() {}
+  }
+
   class Frog {
     constructor(
       public readonly x: number,
@@ -236,21 +240,32 @@ function main() {
   const initGoal = new Goal(FROG_START_X, 0, FROG_SIZE, FROG_SIZE);
 
   // ========== REACTIVE STREAMS ==========
-  
+
   // Keyboard controls stream
   const controls$ = fromEvent<KeyboardEvent>(document, 'keydown').pipe(
-    filter((key) => key.key === 'w' || key.key === 'a' || key.key === 's' || key.key === 'd'),
+    filter((key) => key.key === 'w' || key.key === 'a' || key.key === 's' || key.key === 'd' || key.key === 'r' || key.key === 'R'),
     filter(({ repeat }) => !repeat),
     map(key =>
       key.key === 'w' ? new ChangeMove('y', -MOVE_DISTANCE) :
       key.key === 's' ? new ChangeMove('y', MOVE_DISTANCE) :
       key.key === 'd' ? new ChangeMove('x', MOVE_DISTANCE) :
-      new ChangeMove('x', -MOVE_DISTANCE)
+      key.key === 'a' ? new ChangeMove('x', -MOVE_DISTANCE) :
+      new Restart()
     )
   );
 
+  // Restart button stream
+  const restartBtn$ = fromEvent(document.getElementById('restartBtn')!, 'click').pipe(
+    map(() => new Restart())
+  );
+
   // ========== GAME STATE REDUCER ==========
-  const reduceGameState = (acc: Game, val: ChangeMove | number): Game => {
+  const reduceGameState = (acc: Game, val: ChangeMove | number | Restart): Game => {
+    // Handle restart action
+    if (val instanceof Restart) {
+      return initialGame;
+    }
+
     // If game is over, don't update state
     if (acc.gameOver) return acc;
 
@@ -368,10 +383,18 @@ function main() {
       lose.setAttribute('y', String(50));
       svg.appendChild(lose);
     }
+
+    // Remove game over message on restart
+    if (!game.gameOver && hasGameOverElement()) {
+      const gameOverEl = document.getElementById(gameOverElementId);
+      if (gameOverEl) {
+        gameOverEl.remove();
+      }
+    }
   };
 
   // ========== START GAME ==========
-  const stream = merge(interval(10), controls$)
+  const stream = merge(interval(10), controls$, restartBtn$)
     .pipe(scan(reduceGameState, initialGame))
     .subscribe(updateView(scoreElement));
 }
