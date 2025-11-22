@@ -7,18 +7,21 @@ function main() {
   const svg = document.querySelector("#svgCanvas") as SVGElement & HTMLElement;
 
   // ========== CONSTANTS ==========
+  const GRID_SIZE = 40; // Base unit for grid alignment
   const CANVAS_WIDTH = 600;
-  const CANVAS_HEIGHT = 780;
-  const RIVER_TOP = 70;
-  const RIVER_BOTTOM = 330; // 70 + 259 (river height) + 1
-  const FROG_SIZE = 40;
-  const FROG_START_X = 275;
-  const FROG_START_Y = 700;
+  const CANVAS_HEIGHT = 800;
+  const RIVER_TOP = 120; // 3 grid rows
+  const RIVER_BOTTOM = 360; // 6 grid rows (240px total for river)
+  const ROAD_TOP = 360; // Road area starts here
+  const ROAD_BOTTOM = 680; // 8 grid rows (320px total for road) - wider road
+  const FROG_SIZE = GRID_SIZE;
+  const FROG_START_X = 280;
+  const FROG_START_Y = 720;
   const FROG_COLOUR = "#7FFF00";
-  const MOVE_DISTANCE = 30;
+  const MOVE_DISTANCE = GRID_SIZE;
   
   // Game speeds
-  const CAR_SPEEDS = [1, 3, -4, -2.5] as const;
+  const CAR_SPEEDS = [2, 2.5, -3, -2] as const;
   const LOG_SPEEDS = [2, -3, 1] as const;
 
   // ========== TYPE DEFINITIONS ==========
@@ -78,6 +81,7 @@ function main() {
       public readonly Car: Car[],
       public readonly Wood: Wood[],
       public readonly wasOnGoal: boolean, // Track if frog was on goal to prevent duplicate scoring
+      public readonly showGameOverMessage: boolean, // Track if game over message should be displayed
     ) {}
   }
 
@@ -110,12 +114,12 @@ function main() {
   const clampY = (y: number, height: number): number =>
     Math.max(0, Math.min(CANVAS_HEIGHT - height, y));
   
-  // Check if two objects are colliding
+  // Check if two objects are colliding (strict overlap, not just touching)
   const checkCollision = (obj1: Frog, obj2: Car | Wood | Goal): boolean =>
-    obj1.x + obj1.width >= obj2.x &&
-    obj1.x <= obj2.x + obj2.width &&
-    obj1.y + obj1.height >= obj2.y &&
-    obj1.y <= obj2.y + obj2.height;
+    obj1.x + obj1.width > obj2.x &&
+    obj1.x < obj2.x + obj2.width &&
+    obj1.y + obj1.height > obj2.y &&
+    obj1.y < obj2.y + obj2.height;
   
   // Check if object is beyond horizontal boundary
   const checkBoundaryH = (direction: 'left' | 'right', left: number, right: number): boolean =>
@@ -182,15 +186,15 @@ function main() {
   };
 
   // Create game background elements
-  createSVGRect({ x: 0, y: RIVER_TOP, width: CANVAS_WIDTH, height: 259, fill: "#0000FF" }); // river
-  createSVGRect({ x: 0, y: 710, width: CANVAS_WIDTH, height: 70, fill: "#800080" }); // sidewalk1
-  createSVGRect({ x: 0, y: 330, width: CANVAS_WIDTH, height: 70, fill: "#800080" }); // sidewalk2
-  createSVGRect({ x: 0, y: 0, width: CANVAS_WIDTH, height: 70, fill: "#008000" }); // grass
+  createSVGRect({ x: 0, y: 0, width: CANVAS_WIDTH, height: RIVER_TOP, fill: "#008000" }); // grass (goal area)
+  createSVGRect({ x: 0, y: RIVER_TOP, width: CANVAS_WIDTH, height: RIVER_BOTTOM - RIVER_TOP, fill: "#0000FF" }); // river
+  createSVGRect({ x: 0, y: ROAD_TOP, width: CANVAS_WIDTH, height: ROAD_BOTTOM - ROAD_TOP, fill: "#444444" }); // road (car area)
+  createSVGRect({ x: 0, y: ROAD_BOTTOM, width: CANVAS_WIDTH, height: CANVAS_HEIGHT - ROAD_BOTTOM, fill: "#800080" }); // starting area
 
-  // Create log elements
-  const wood: Element = createSVGRect({ x: 100, y: 250, width: 200, height: 80, fill: "#A0522D" });
-  const wood2: Element = createSVGRect({ x: 300, y: 170, width: 400, height: 70, fill: "#A0522D" });
-  const wood3: Element = createSVGRect({ x: 250, y: 80, width: 300, height: 80, fill: "#A0522D" });
+  // Create log elements (grid-aligned: 40px height, widths as multiples of 40)
+  const wood: Element = createSVGRect({ x: 80, y: 320, width: 160, height: GRID_SIZE, fill: "#A0522D" });
+  const wood2: Element = createSVGRect({ x: 200, y: 240, width: 320, height: GRID_SIZE, fill: "#A0522D" });
+  const wood3: Element = createSVGRect({ x: 120, y: 160, width: 240, height: GRID_SIZE, fill: "#A0522D" });
 
   // Create frog element
   const frogElement: Element = createSVGRect({
@@ -201,11 +205,11 @@ function main() {
     fill: FROG_COLOUR
   });
 
-  // Create car elements
-  const obstacle: Element = createSVGRect({ x: 400, y: 570, width: 130, height: 50, fill: "#FF0000" });
-  const obstacle2: Element = createSVGRect({ x: 250, y: 420, width: 130, height: 50, fill: "#FF0000" });
-  const obstacle3: Element = createSVGRect({ x: 100, y: 630, width: 80, height: 50, fill: "#FF0000" });
-  const obstacle4: Element = createSVGRect({ x: 330, y: 500, width: 150, height: 50, fill: "#FF0000" });
+  // Create car elements (grid-aligned: 40px height, widths as multiples of 40)
+  const obstacle: Element = createSVGRect({ x: 450, y: 560, width: 120, height: GRID_SIZE, fill: "#FF0000" });
+  const obstacle2: Element = createSVGRect({ x: 150, y: 400, width: 120, height: GRID_SIZE, fill: "#FF0000" });
+  const obstacle3: Element = createSVGRect({ x: 200, y: 640, width: 80, height: GRID_SIZE, fill: "#FF0000" });
+  const obstacle4: Element = createSVGRect({ x: 50, y: 480, width: 120, height: GRID_SIZE, fill: "#FF0000" });
 
   // Create goal element
   const goal: Element = createSVGRect({ x: FROG_START_X, y: 0, width: FROG_SIZE, height: FROG_SIZE, fill: "#FFA500" });
@@ -221,22 +225,22 @@ function main() {
   const initialFrog = new Frog(FROG_START_X, FROG_START_Y, FROG_SIZE, FROG_SIZE, FROG_COLOUR);
   
   // Initialize cars: objects moving right start off-screen left, objects moving left start off-screen right
-  // CAR_SPEEDS = [1, 3, -4, -2.5] (cars 0,1 move right; cars 2,3 move left)
+  // CAR_SPEEDS = [2, 2.5, -3, -2] (cars 0,1 move right; cars 2,3 move left)
   const initialCars = [
-    new Car(-130, 570, 130, 50),  // Car 0: speed 1 (right) - start off-screen left
-    new Car(-130, 420, 130, 50), // Car 1: speed 3 (right) - start off-screen left
-    new Car(600, 630, 80, 50),   // Car 2: speed -4 (left) - start off-screen right
-    new Car(600, 500, 150, 50)    // Car 3: speed -2.5 (left) - start off-screen right
+    new Car(-120, 600, 120, GRID_SIZE),  // Car 0: speed 2 (right) - start off-screen left
+    new Car(-120, 520, 120, GRID_SIZE), // Car 1: speed 2.5 (right) - start off-screen left
+    new Car(600, 640, 80, GRID_SIZE),   // Car 2: speed -3 (left) - start off-screen right
+    new Car(600, 560, 120, GRID_SIZE)    // Car 3: speed -2 (left) - start off-screen right
   ];
   
   // Initialize logs: objects moving right start off-screen left, objects moving left start off-screen right
   // LOG_SPEEDS = [2, -3, 1] (logs 0,2 move right; log 1 moves left)
   const initialLogs = [
-    new Wood(-200, 250, 200, 80), // Log 0: speed 2 (right) - start off-screen left
-    new Wood(600, 170, 400, 70), // Log 1: speed -3 (left) - start off-screen right
-    new Wood(-300, 80, 300, 80)  // Log 2: speed 1 (right) - start off-screen left
+    new Wood(-160, 320, 160, GRID_SIZE), // Log 0: speed 2 (right) - start off-screen left
+    new Wood(600, 240, 320, GRID_SIZE), // Log 1: speed -3 (left) - start off-screen right
+    new Wood(-240, 160, 240, GRID_SIZE)  // Log 2: speed 1 (right) - start off-screen left
   ];
-  const initialGame = new Game(0, false, initialFrog, initialCars, initialLogs, false);
+  const initialGame = new Game(0, false, initialFrog, initialCars, initialLogs, false, false);
   const initGoal = new Goal(FROG_START_X, 0, FROG_SIZE, FROG_SIZE);
 
   // ========== REACTIVE STREAMS ==========
@@ -271,21 +275,29 @@ function main() {
 
     // Update frog position based on user input
     const movedFrog = val instanceof ChangeMove
-      ? val.axis === 'x'
-        ? new Frog(
-            acc.Frog.x + val.distance,
-            acc.Frog.y,
-            acc.Frog.width,
-            acc.Frog.height,
-            acc.Frog.colour
-          )
-        : new Frog(
-            acc.Frog.x,
-            acc.Frog.y + val.distance,
-            acc.Frog.width,
-            acc.Frog.height,
-            acc.Frog.colour
-          )
+      ? (() => {
+          // Check if frog is actually standing on a log (not just on land)
+          const isTouchingLog = findLogUnderFrog(acc.Frog, acc.Wood) !== undefined;
+          // For Y-axis (forward/backward): if touching a log, move 2 spaces; otherwise 1 space
+          // For X-axis (left/right): always move 1 space regardless
+          const moveDistance = val.axis === 'y' && isTouchingLog ? val.distance * 2 : val.distance;
+          
+          return val.axis === 'x'
+            ? new Frog(
+                acc.Frog.x + moveDistance,
+                acc.Frog.y,
+                acc.Frog.width,
+                acc.Frog.height,
+                acc.Frog.colour
+              )
+            : new Frog(
+                acc.Frog.x,
+                acc.Frog.y + moveDistance,
+                acc.Frog.width,
+                acc.Frog.height,
+                acc.Frog.colour
+              );
+        })()
       : acc.Frog;
 
     // Check if frog is on a log BEFORE logs move (using current log positions)
@@ -333,7 +345,10 @@ function main() {
       ? new Frog(FROG_START_X, FROG_START_Y, FROG_SIZE, FROG_SIZE, FROG_COLOUR)
       : clampedFrog;
 
-    return new Game(newScore, endGame, finalFrog, newCars, newLogs, wasOnGoal);
+    // Show game over message only when game just ended (transition from not gameOver to gameOver)
+    const showGameOverMessage = endGame && !acc.gameOver;
+
+    return new Game(newScore, endGame, finalFrog, newCars, newLogs, wasOnGoal, showGameOverMessage);
   };
 
   // ========== VIEW UPDATE FUNCTIONS ==========
@@ -351,10 +366,7 @@ function main() {
     object.setAttribute('x', String(wood.x));
   };
 
-  // Check if game over element already exists (functional approach - no mutable state)
   const gameOverElementId = 'gameOverText';
-  const hasGameOverElement = (): boolean => 
-    document.getElementById(gameOverElementId) !== null;
 
   const updateView = (scoreEl: Element) => (game: Game) => {
     // Update frog position
@@ -374,8 +386,8 @@ function main() {
     // Update score
     scoreEl.textContent = 'Score: ' + game.score;
 
-    // Display game over message (only once - check DOM instead of mutable variable)
-    if (game.gameOver && !hasGameOverElement()) {
+    // Display game over message only when showGameOverMessage is true (derived from state)
+    if (game.showGameOverMessage) {
       const lose = document.createElementNS(svg.namespaceURI, "text")!;
       lose.id = gameOverElementId;
       lose.textContent = "Game Over!";
@@ -384,8 +396,8 @@ function main() {
       svg.appendChild(lose);
     }
 
-    // Remove game over message on restart
-    if (!game.gameOver && hasGameOverElement()) {
+    // Remove game over message on restart (when game is not over and element exists)
+    if (!game.gameOver) {
       const gameOverEl = document.getElementById(gameOverElementId);
       if (gameOverEl) {
         gameOverEl.remove();
