@@ -206,10 +206,16 @@ function main() {
   });
 
   // Create car elements (grid-aligned: 40px height, widths as multiples of 40)
-  const obstacle: Element = createSVGRect({ x: 450, y: 560, width: 120, height: GRID_SIZE, fill: "#FF0000" });
-  const obstacle2: Element = createSVGRect({ x: 150, y: 400, width: 120, height: GRID_SIZE, fill: "#FF0000" });
-  const obstacle3: Element = createSVGRect({ x: 200, y: 640, width: 80, height: GRID_SIZE, fill: "#FF0000" });
-  const obstacle4: Element = createSVGRect({ x: 50, y: 480, width: 120, height: GRID_SIZE, fill: "#FF0000" });
+  const initialCarsForDisplay = [
+    new Car(450, 560, 120, GRID_SIZE),
+    new Car(150, 400, 120, GRID_SIZE),
+    new Car(200, 640, 80, GRID_SIZE),
+    new Car(50, 480, 120, GRID_SIZE)
+  ];
+
+  const obstacles: Element[] = initialCarsForDisplay.map(car =>
+    createSVGRect({ x: car.x, y: car.y, width: car.width, height: GRID_SIZE, fill: "#FF0000" })
+  );
 
   // Create goal element
   const goal: Element = createSVGRect({ x: FROG_START_X, y: 0, width: FROG_SIZE, height: FROG_SIZE, fill: "#FFA500" });
@@ -224,14 +230,7 @@ function main() {
   // ========== INITIAL GAME STATE ==========
   const initialFrog = new Frog(FROG_START_X, FROG_START_Y, FROG_SIZE, FROG_SIZE, FROG_COLOUR);
   
-  // Initialize cars: objects moving right start off-screen left, objects moving left start off-screen right
-  // CAR_SPEEDS = [2, 2.5, -3, -2] (cars 0,1 move right; cars 2,3 move left)
-  const initialCars = [
-    new Car(-120, 600, 120, GRID_SIZE),  // Car 0: speed 2 (right) - start off-screen left
-    new Car(-120, 520, 120, GRID_SIZE), // Car 1: speed 2.5 (right) - start off-screen left
-    new Car(600, 640, 80, GRID_SIZE),   // Car 2: speed -3 (left) - start off-screen right
-    new Car(600, 560, 120, GRID_SIZE)    // Car 3: speed -2 (left) - start off-screen right
-  ];
+  const initialCars = initialCarsForDisplay;
   
   // Initialize logs: objects moving right start off-screen left, objects moving left start off-screen right
   // LOG_SPEEDS = [2, -3, 1] (logs 0,2 move right; log 1 moves left)
@@ -319,7 +318,6 @@ function main() {
     const newCars = updateCars(acc.Car, CAR_SPEEDS);
     const newLogs = updateLogs(acc.Wood, LOG_SPEEDS);
 
-    // Clamp frog position to boundaries
     const clampedFrog = new Frog(
       clampX(frogOnLog.x, frogOnLog.width),
       clampY(frogOnLog.y, frogOnLog.height),
@@ -328,11 +326,9 @@ function main() {
       frogOnLog.colour
     );
 
-    // Check if frog is safely on a log or on land
     const onLog = isOnLog(clampedFrog, newLogs);
 
-    // Check for collisions
-    const hitCar = checkCarCollision(clampedFrog, newCars);
+    const hitCar = checkCarCollision(clampedFrog, acc.Car);  
     const endGame = hitCar || !onLog;
 
     // Check if frog reached goal (only score if wasn't already on goal)
@@ -369,16 +365,10 @@ function main() {
   const gameOverElementId = 'gameOverText';
 
   const updateView = (scoreEl: Element) => (game: Game) => {
-    // Update frog position
     animateFrog(frogElement)(game.Frog);
 
-    // Update car positions
-    animateCar(obstacle)(game.Car[0]);
-    animateCar(obstacle2)(game.Car[1]);
-    animateCar(obstacle3)(game.Car[2]);
-    animateCar(obstacle4)(game.Car[3]);
+    game.Car.forEach((car, index) => animateCar(obstacles[index])(car));
 
-    // Update log positions
     animateWood(wood)(game.Wood[0]);
     animateWood(wood2)(game.Wood[1]);
     animateWood(wood3)(game.Wood[2]);
